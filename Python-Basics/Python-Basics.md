@@ -101,3 +101,56 @@ print(MAX_CONTANTS)
 
 
 ## 列表简介
+
+### 访问列表元素
+
+索引-1代表的是列表中最后一个元素
+
+```python
+lists = ["list0", "list1", "list2", "list3"]
+print(lists)
+print(lists[0])
+print(lists[-1])
+```
+
+### 添加/插入元素
+
+```python
+lists = ["list0", "list1", "list2", "list3"]
+lists.append("list5")
+lists.insert(4, "list4")
+print(lists)
+```
+
+### 删除元素
+
+```python
+lists = ["list0", "list1", "list2", "list3", "list4", "list5"]
+del lists[-1]
+lists.pop()
+lists.pop(0)
+lists.remove("list2")
+print(lists)
+```
+
+### 正/反排序
+
+| 方法 | 效果 |
+| --- | ----------- |
+| sort | 根据字母排序 |
+| sorted | 临时排序 |
+| reverse | 颠倒 |
+| sort(reverse=True) | 先sort再reverse |
+
+```python
+alphabet = ["b", "d", "e", "g", "h", "a", "u", "z", "o", "l", "p"]
+print(sorted(alphabet))
+print(alphabet)
+alphabet.sort()
+alphabet.sort(reverse=True)
+alphabet.reverse()
+print(alphabet)
+```
+
+
+
