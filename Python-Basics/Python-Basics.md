@@ -154,3 +154,109 @@ print(alphabet)
 
 
 
+## 操作列表
+
+### 遍历列表
+
+```python
+personList = ["vl", "coconut", "cardinal"]
+for person in personList:
+    print(person)
+print("loop end")
+```
+
+### 避免缩进/冒号错误
+
+就是要非常注意的意思
+
+### 创建数值列表
+
+使用range()
+
+```python
+for value in range(1, 5):
+    print(value)
+# 不会输出5
+```
+
+list()转列表
+
+```python
+rangeList = list(range(1, 6))
+for value in rangeList:
+    print(value)
+```
+
+range()带步长
+
+```python
+rangeListStep = list(range(0, 11, 2))
+for value in rangeListStep:
+    print(value)
+```
+
+python自带的几个简单函数
+
+```python
+rangeListStep2 = list(range(0, 101, 2))
+print(min(rangeListStep2))
+print(max(rangeListStep2))
+print(sum(rangeListStep2))
+```
+
+列表推导式
+
+```python
+rangeListStep3 = [value**3 for value in range(1, 12, 2)]
+print(rangeListStep3)
+```
+
+### 使用列表的一部分
+
+切片
+
+```python
+sliceList = ["vl", "max", "bella", "nick"]
+print(f"{sliceList[:1]} are 00")
+print(f"{sliceList[1:]} are 95")
+print(f"{sliceList[-3:]} are 95")
+print(f"{sliceList[1:3]} are girls")
+for girl in sliceList[1:3]:
+    print(f"{girl} is girl")
+```
+
+复制
+
+注意：一个是复制，一个是副本赋值
+
+```python
+sliceList1 = sliceList[:]
+sliceList2 = sliceList
+sliceList1.append("xiuhui")
+sliceList1.append("colin")
+print(f"Digital's framework team: {sliceList1}")
+print(f"Digital's framework team: {sliceList2}")
+```
+
+### 元组
+
+元组类似于列表，但是不可以给元组的元素赋值
+
+```python
+dimensions = (200, 50)
+print(dimensions[0])
+print(dimensions[1])
+# dimensions[1] = 250
+```
+
+同样可以循环
+
+```python
+for dimension in dimensions:
+    print(dimension)
+```
+
+**注意：**虽然不可以给元素赋值，但是可以直接修改元组的变量
+
+
+
