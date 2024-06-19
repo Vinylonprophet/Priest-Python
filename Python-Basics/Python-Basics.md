@@ -260,3 +260,68 @@ for dimension in dimensions:
 
 
 
+## if语句
+
+### 简单使用
+
+**注意：**
+
+1. 在python中没有`===`的存在
+2. 想比较两个变量的类型和值是否相等，可以使用`is`关键字来进行身份比较
+3. python中没有`else if`只有`elif`
+
+```python
+for role in ["vl", "bella", "max", "nick", "colin", "xiuhui"]:
+    if role == "xiuhui":
+        print(f"{role} is leader")
+    elif role != "xiuhui":
+        print(f"{role} is aide")
+```
+
+### 检查多个条件
+
+and相当于&&
+
+or相当于||
+
+```python
+age_vl = 24
+if age_vl >= 18 and age_vl < 25:
+    print("VL is in the prime of their youth.")
+```
+
+### 检查特定的值是否在列表中
+
+使用in
+
+```python
+roles = ["VL", "Maggie", "Auggie", "Wency"]
+print(f"Has VL resigned? ==>", "VL" in roles)
+print(f"Maggie has not resigned. ==>", "Maggie" not in roles)
+```
+
+### 测试多个条件
+
+`if-if`不会跳
+
+`if-elif-else`会跳
+
+```python
+roles = ["VL", "Maggie", "Auggie", "Wency"]
+if "VL" in roles:
+    print("VL has resigned.")
+if "Auggie" in roles:
+    print("Auggie has resigned.")
+```
+
+### 确定列表为非空
+
+```python
+personlist = []
+if personlist:
+    for person in personlist:
+        print(f"The {person} exists.")
+else:
+    print("The person does not exist.")
+```
+
