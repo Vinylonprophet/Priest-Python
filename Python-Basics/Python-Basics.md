@@ -434,3 +434,141 @@ for topping in pizza["toppings"]:
     print(f"\t{topping}")
 ```
 
+
+
+## 函数
+
+### 定义函数
+
+使用def定义
+
+name是形参，VL是实参（针对没有学过编程语言的同学）
+
+```python
+def greet_user(name):
+    print(f"Hello! {name} is greeting!")
+
+
+greet_user("VL")
+```
+
+传两个参数
+
+**注意：**如果是关键字形参的话顺序就无关紧要了
+
+```python
+def greet_user(name, adjective):
+    print(f"Hello! {name} is {adjective}!")
+
+
+greet_user("VL", "greeting")
+```
+
+默认形参
+
+```python
+def greet_user1(name, adjective="amazing"):
+    print(f"Hello! {name} is {adjective}!")
+
+
+greet_user1("VL")
+```
+
+### 返回值
+
+return返回
+
+```python
+def greet_user2(name, adjective="amazing"):
+    return name
+
+
+print(greet_user2("VL"))
+```
+
+while和input结合
+
+```python
+while True:
+    print("\nPlease tell me your name:")
+    print("(enter 'q' at any time to quit.)")
+
+    f_name = input("First Name: ")
+    if f_name == "q":
+        break
+
+    l_name = input("Last Name: ")
+    if l_name == "q":
+        break
+
+    print(f"\nHello, {get_formatted_name(f_name, l_name)}")
+```
+
+### 传递列表
+
+函数中修改列表很简单，但是如果想禁止函数修改列表，就请注意传递列表的副本给函数
+
+```\
+function_name(list_name[:])
+```
+
+### 传递任意数量的实参
+
+使用星号(*)创建一个元组，多用于 *args这样的名字
+
+```python
+def make_pizza(*toppings):
+    print(toppings)
+
+
+make_pizza("pepperoni")
+make_pizza("pepperoni", "mushrooms", "green peppers")
+```
+
+使用任意数量关键字实参
+
+```python
+def build_profile(first, last, **user_info):
+    user_info["first_name"] = first
+    user_info["last_name"] = last
+    return user_info
+
+
+user_profile = build_profile("VL", "Wu", age="18", career="student")
+print(user_profile)
+```
+
+### 导入模块
+
+导入整个模块
+
+```python
+import module_name
+
+module_name.function_name()
+```
+
+从模块中导入方法
+
+```python
+from module_name import function_name1, function_name2, function_name3
+```
+
+用as给函数指定别名
+
+```python
+from module_name import function_name as func
+```
+
+用as给模块指定别名
+
+```python
+import module_name as xxx
+```
+
+导入所有函数**（非常不建议使用！！！）**
+
+```python
+from module_name import *
+```
+
