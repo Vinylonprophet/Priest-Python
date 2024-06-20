@@ -325,3 +325,112 @@ else:
     print("The person does not exist.")
 ```
 
+
+
+## 字典
+
+类似于JavaScript中的对象
+
+访问方式类似于JavaScript中的属性访问表达式
+
+### 简单语法
+
+```python
+citi = {"department": {"icg", "gcg", "pbwm"}, "staff": {"vl", "bella", "max", "nick"}}
+print(citi["department"])
+```
+
+### 使用字典
+
+1. 修改
+
+2. 添加
+
+3. 删除
+
+   ```python
+   del citi["department"]
+   print(citi)
+   ```
+
+4. 访问
+
+5. 创建
+
+### 字典排序
+
+按键排序
+
+```python
+my_dict = {'b': 3, 'a': 1, 'c': 2}
+
+# 按键排序
+sorted_keys = sorted(my_dict.keys())
+
+for key in sorted_keys:
+    print(f'{key}: {my_dict[key]}')
+```
+
+按值排序
+
+```python
+sorted_items = sorted(my_dict.items(), key=lambda x: x[1])
+for key, value in sorted_items:
+    print(f'{key}: {value}')
+```
+
+**注意：**以上皆不会改变原字典顺序
+
+### get访问值
+
+可用于错误处理，提供一个默认值，类似于lodash库中的get
+
+```python
+poinit_value = citi.get("vl", "VL has been left")
+poinit_value1 = citi.get("staff", "u can get right?")
+print(poinit_value)
+print(poinit_value1)
+```
+
+### 遍历字典
+
+```python
+citi1 = {"department": {"icg", "gcg", "pbwm"}, "staff": {"vl", "bella", "max", "nick"}}
+for key, value in citi1.items():
+    print(f"{key}: {value}\n")
+```
+
+### 熟悉items()，key()，values()
+
+| 方法       | 描述                                                         |
+| ---------- | ------------------------------------------------------------ |
+| `items()`  | 返回包含字典所有键值对的视图。每个元素是一个包含键和值的元组。 |
+| `keys()`   | 返回包含字典所有键的视图。                                   |
+| `values()` | 返回包含字典所有值的视图。                                   |
+
+### 剔除重复项set
+
+```python
+citi2 = {
+    "department": {"icg", "gcg", "pbwm"},
+    "staff": {"vl", "bella", "max", "nick"},
+    "staff": {"xiuhui", "colin"},
+}
+citi3 = {"a": "a", "b": "b", "b": "b"}
+for key in set(citi2.keys()):
+    print(key)
+for value in set(citi3.values()):
+    print(value)
+```
+
+### 嵌套
+
+多个字典存储在列表中或者列表存储在字典中称之为`嵌套`
+
+```python
+pizza = {"crust": "thick", "toppings": ["mushrooms", "extra cheese"]}
+print(f"Your ordered a {pizza['crust']}-crust pizza with the following toppings:")
+for topping in pizza["toppings"]:
+    print(f"\t{topping}")
+```
+
