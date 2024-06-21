@@ -727,4 +727,93 @@ my_leaf.battery.describe_battery()
    from electric_car import ElectricCar as EC
    ```
 
-   
+
+
+## 文件和异常
+
+### 读取文件
+
+可以一次性读取，也可以逐行读取
+
+创建一个名为`pi_digital`文本文件
+
+```txt
+3.1415926535
+    8979323846
+    2643383279
+    5028841971
+    6939937510
+    5820974944
+    5923078164
+    0628620899
+    8628034825
+    3421170679
+```
+
+使用pathlib的库，用Path对象来`核实`是否存在，`读取`内容，数据`写入`
+
+```python
+from pathlib import Path
+
+path = Path('pi_digital.txt')
+contents = path.read_text()
+print(contents)
+```
+
+读取完的结果会多一个空行，因为read_text()在文件末尾会返回一个空字符串，会被显示为一个空行，可以使用`rstrip()`解决这个问题
+
+相对路径和绝对路径的两种读取方式
+
+```python
+path = Path('text_files/filename.txt')
+path = Path('/home/eric/data_files/text_files/filename.txt')
+```
+
+访问文件中的各行
+
+```python
+lines = contents.splitlines()
+for line in lines:
+    print(line.lstrip())
+```
+
+使用内容
+
+```python
+pi_string = ""
+for line in lines:
+    pi_string += line.lstrip()
+
+print(pi_string)
+print(len(pi_string))
+```
+
+判断生日是否在圆周率后小数点100w位
+
+```python
+pi_million_contents = Path("pi_million_digits.txt").read_text()
+# pi_million_contents_lines = pi_million_contents.splitlines()
+birthday = input("请输入你的生日：")
+print(f"你的生日是{birthday}")
+if birthday in pi_million_contents:
+    print("Your birthday appears in the first million digits of pi!")
+else:
+    print("Your birthday does not appear in the first million digits of pi!")
+```
+
+如果没有100w小数点的文件可以使用以下代码（稍后会介绍写入文件）
+
+```python
+from mpmath import mp
+
+# 设置计算的精度
+mp.dps = 1000002  # 小数点后 100 万位 + 2 位，包含 "3."
+pi = str(mp.pi)
+
+# 将结果写入文件
+with open('pi_million_digits.txt', 'w') as f:
+    f.write(pi)
+
+print("圆周率小数点后 100 万位已写入文件 pi_million_digits.txt")
+```
+
