@@ -817,3 +817,144 @@ with open('pi_million_digits.txt', 'w') as f:
 print("圆周率小数点后 100 万位已写入文件 pi_million_digits.txt")
 ```
 
+### 写入文件
+
+写入文件
+
+```python
+from pathlib import Path
+
+content = "U love programming.\n"
+content += "No, I don't love programming!\n"
+content += "No, U really love programming!!!\n"
+
+
+path = Path("programming.txt")
+path.write_text(content)
+```
+
+**注意：**
+
+1. Python只能将字符串写入文本文件。如果要将数值数据存储到文本文件中，必须先使用函数str()将其转换为字符串格式
+2. 如果指定文件已存在，write_text()将删除其内容，并将指定的内容写入其中。
+
+### 异常
+
+异常（exception）的特殊对象是用来管理程序执行期间发生的错误的，是使用`try-except`代码块进行处理，即使出现异常，程序也会继续运行：`显示你编写的友好的错误消息`，`而不是令人迷惑的traceback`
+
+```python
+try:
+    print(5 / 0)
+except:
+    print("You can't divide by zero!")
+```
+
+else代码块
+
+```python
+print("Please give me two numbers, and I'll divide them!")
+print("Enter 'q' to quit.")
+
+while True:
+    first_number = input("\nFirst Number: ")
+    if first_number == "q":
+        break
+    second_number = input("Second Number: ")
+    if second_number == "q":
+        break
+    try:
+        answer = int(first_number) / int(second_number)
+    except ZeroDivisionError:
+        print("You can't divide by zero!")
+    else:
+        print(answer)
+```
+
+### FileNotFound处理
+
+```python
+from pathlib import Path
+
+path = Path("not_exist_file.txt")
+try:
+    contents = path.read_text(encoding="utf-8")
+except FileNotFoundError:
+    print(f"Sorry, file {path} doesn't exist")
+```
+
+### 分析文本
+
+```python
+contents = path.read_text(encoding='utf-8')
+words = contents.split()
+num_words = len(words)
+```
+
+### 使用多个文件
+
+```python
+filenames = ['a.txt', 'b.txt', 'c.txt']
+for filename in filenames:
+    path = Path(filename)
+```
+
+### 静默失败
+
+```python
+try:
+    --snip--
+except:
+    pass
+else:
+    --snip--
+```
+
+### 存储数据
+
+json.dumps()和json.loads()
+
+存
+
+```python
+import json
+json.dumps()
+```
+
+取
+
+```python
+import json
+json.loads()
+```
+
+### 重构
+
+```python
+from pathlib import Path
+import json
+
+
+def get_stored_username(path):
+    if path.exists():
+        contents = path.read_text()
+        username = json.loads(contents)
+        return username
+    else:
+        return None
+
+
+def greet_user():
+    path = Path("username.json")
+    username = get_stored_username(path)
+    if username:
+        print(f"welcome back, {username}")
+    else:
+        username = input("what's your name?")
+        contents = json.dumps(username)
+        path.write_text(contents)
+        print(f"We'll remember you when you come back, {username}!")
+
+
+greet_user()
+```
+

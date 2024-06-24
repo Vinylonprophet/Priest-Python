@@ -2,7 +2,10 @@ from pathlib import Path
 
 path = Path("pi_digital.txt")
 contents = path.read_text()
+words = contents.split()
+num_words = len(words)
 # print(contents.rstrip())
+print(num_words)
 print(contents)
 
 lines = contents.splitlines()
