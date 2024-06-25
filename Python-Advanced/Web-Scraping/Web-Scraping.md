@@ -167,3 +167,188 @@ else:
     print(title)
 ```
 
+
+
+## 复杂HTML解析
+
+如果一级级去找我们需要的标签，那么就会导致一个问题——如果目标网站的html结构改了，那么整个爬虫就被`碾死`了！
+
+### 根据层叠样式表解析
+
+**重要方法：**
+
+1. find_all()：提取标签
+2. get_text()：清理所有标签，返回一个只包含文字的Unicode字符串
+
+```python
+from urllib.request import urlopen
+from urllib.request import HTTPError
+from bs4 import BeautifulSoup
+
+
+def getTVList(url):
+    try:
+        html = urlopen(url)
+    except HTTPError as e:
+        return None
+    try:
+        bs = BeautifulSoup(html.read(), "html.parser")
+        tvList = bs.find_all("li", {"class": "item"})
+    except AttributeError as e:
+        return None
+    return tvList
+
+
+tvList = getTVList("https://bangumi.tv/anime/browser/airtime/2024-5")
+if tvList == None:
+    print("Title could not be found!")
+else:
+    for tv in tvList:
+        print(tv.get_text())
+```
+
+
+
+#### find()和find_all()
+
+**文档定义：**
+
+1. find_all(tag, attributes, recursive, text, limit, keywords)
+2. find(tag, attributes, recursive, text, keywords)
+
+**参数：**
+
+1. tag
+
+   - ['h1', 'h2', 'h3']
+   - 'h1'
+
+2. attributes
+
+   - {'class': 'item'}
+   - {"class": {"item", "clearit"}}
+
+3. recursive（递归参数）
+
+   - True: 默认是True，遍历所有标签
+   - False: 只遍历一级标签
+
+4. text
+
+   - 用标签的文本内容去匹配，而不是用标签的属性
+
+   - 如果想查询页面中包含`the prince`的标签数量可以这么写：
+
+     ```python
+     nameList = bs.find_all(text='the prince')
+     print(len(nameList))
+     ```
+
+5. limit（只有find_all有这个参数，如果想获取网页中前x项结果就设置它，`find相当于find_all设置limit为1时的结果`）
+
+6. keywords
+
+   - 可以选择那些具有指定属性的标签
+
+     ```python
+     bs.find(type="text/css")
+     ```
+
+
+
+#### 其他BeautifulSoup对象
+
+除了之前提到的对象还有另外两种不那么常用的对象：
+
+1. NavigableString对象
+
+   用来表示标签里的文字而不是标签本身
+
+2. Comment对象
+
+   用来查找HTML文档中的注释标签，< ! -- 这种 -- >
+
+
+
+#### 导航树
+
+意思是层层解析，不难，读者就看看代码吧。。。
+
+##### 处理子标签和后代标签
+
+```python
+html = urlopen("https://pythonscraping.com/pages/page3.html")
+bs = BeautifulSoup(html.read(), "html.parser")
+
+for child in bs.find("table", {"id": "giftList"}).children:
+    print(child)
+```
+
+##### 处理兄弟标签
+
+next_siblings()只调用**后面**的兄弟标签（那么你也可以理解一下previous_siblings）
+
+next_sibling和previous_sibling这一组和上面的区别就是`有没有s`
+
+```python
+html = urlopen("https://pythonscraping.com/pages/page3.html")
+bs = BeautifulSoup(html.read(), "html.parser")
+
+for sibling in bs.find("table", {"id": "giftList"}).tr.next_siblings:
+    print(sibling)
+```
+
+##### 处理父标签
+
+记住`parents`和`parent`
+
+```python
+html = urlopen("https://pythonscraping.com/pages/page3.html")
+bs = BeautifulSoup(html.read(), "html.parser")
+
+print(
+    bs.find("img", {"src": "../img/gifts/img1.jpg"}).parent.previous_sibling.get_text()
+)
+```
+
+
+
+### 正则表达式
+
+自己学吧（没必要背下来我觉得。。。）
+
+
+
+### 正则表达式和BeautifulSoup
+
+打印以`../img/gifts/img`开头，`.jpg`结尾的图片
+
+```python
+import re
+from urllib.request import urlopen
+from bs4 import BeautifulSoup
+
+html = urlopen("https://pythonscraping.com/pages/page3.html")
+bs = BeautifulSoup(html.read(), "html.parser")
+images = bs.find_all("img", {"src": re.compile("\.\.\/img\/gifts\/img.*\.jpg")})
+for img in images:
+    print(img["src"])
+```
+
+
+
+### 获取属性
+
+对于一个标签对象，可以用下面代码获取全部属性
+
+img.attrs
+
+如果只要src则
+
+img.attrs['src']
+
+
+
+### Lambda表达式
+
+可学可不学（看自己，反正标题给你起了）
