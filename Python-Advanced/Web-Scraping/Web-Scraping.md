@@ -352,3 +352,418 @@ img.attrs['src']
 ### Lambda表达式
 
 可学可不学（看自己，反正标题给你起了）
+
+
+
+## 编写网络爬虫
+
+**网络爬虫**就是检查一个网站，寻找另一个URL，再获取该URL对应的网页内容，不断循环这一过程。
+
+### 遍历单个域名
+
+#### 最简单的遍历方式
+
+```python
+from urllib.request import urlopen
+from bs4 import BeautifulSoup
+
+html = urlopen("https://en.wikipedia.org/wiki/Kevin_Bacon")
+bs = BeautifulSoup(html, "html.parser")
+
+for link in bs.find_all("a"):
+    if "href" in link.attrs:
+        print(link.attrs["href"])
+```
+
+
+
+#### 只遍历词条链接
+
+简单版本（因为外网问题不一定能成功，可能会有502的问题）
+
+```python
+from urllib.request import urlopen
+from bs4 import BeautifulSoup
+import re
+
+html = urlopen("http://en.wikipedia.org/wiki/Kevin_Bacon")
+
+if html:
+    bs = BeautifulSoup(html, "html.parser")
+    for link in bs.find("div", {"id": "bodyContent"}).find_all(
+        "a", re.compile("^(/wiki/)((?!:).)*$")
+    ):
+        if "href" in link.attrs:
+            print(link.attrs["href"])
+else:
+    print("Failed to visit this web page.")
+```
+
+复杂版本（新增了retry操作）
+
+```python
+from urllib.request import urlopen
+from urllib.error import HTTPError, URLError
+from bs4 import BeautifulSoup
+import re
+import time
+
+def get_html(url, retries=3):
+    for i in range(retries):
+        try:
+            return urlopen(url)
+        except HTTPError as e:
+            print(f"HTTP error: {e.code}")
+            if e.code == 502:
+                print(f"Attempt {i + 1} failed with error 502: Bad Gateway. Retrying...")
+                time.sleep(2)
+            else:
+                return None
+        except URLError as e:
+            print(f"URL error: {e.reason}")
+            return None
+    return None
+
+url = "https://en.wikipedia.org/wiki/Kevin_Bacon"
+html = get_html(url)
+
+if html:
+    bs = BeautifulSoup(html, "html.parser")
+    for link in bs.find("div", {"id": "bodyContent"}).find_all(
+        "a", href=re.compile("^(/wiki/)((?!:).)*$")
+    ):
+        if "href" in link.attrs:
+            print(link.attrs["href"])
+else:
+    print("Failed to retrieve the web page.")
+```
+
+
+
+#### 更正规的遍历方式
+
+random是用来做随机处理
+
+`format()` 方法是用来格式化字符串的一个内置方法，将变量插入到字符串中的特定位置，从而创建一个新的格式化后的字符串
+
+请自己思考以下代码的purpose是什么？
+
+**注意：**
+
+1. 可能与外网有关，不一定都能成功，如果遇上了URLError的话也可以自己加上重新递归
+2. 如果觉得爬取数据过多，可以选择在while的最后加一个break
+
+```python
+from urllib.request import urlopen
+from urllib.error import HTTPError, URLError
+from bs4 import BeautifulSoup
+import re
+import random
+import time
+
+random.seed(time.time())
+
+
+def get_html(url, article, retries=10):
+    for i in range(retries):
+        try:
+            return urlopen(url.format(article))
+        except HTTPError as e:
+            print(f"HTTP error: {e.code}")
+            if e.code == 502:
+                print(
+                    f"Attempt {i + 1} failed with error 502: Bad Gateway. Retrying..."
+                )
+                time.sleep(2)
+            else:
+                return None
+        except URLError as e:
+            print(f"URL error: {e.reason}")
+            return None
+    return None
+
+
+def get_links(html):
+    if html:
+        bs = BeautifulSoup(html, "html.parser")
+        return bs.find("div", {"id": "bodyContent"}).find_all(
+            "a", href=re.compile("^(/wiki/)((?!:).)*$")
+        )
+    else:
+        print("Failed to retrieve the web page.")
+
+
+links = get_links(get_html("http://en.wikipedia.org{}", "/wiki/Kevin_Bacon"))
+
+while links:
+    newArticle = links[random.randint(0, len(links) - 1)].attrs["href"]
+    print(newArticle)
+    get_links(get_html("http://en.wikipedia.org{}", newArticle))
+```
+
+个人练手代码（单个网站循环深入）
+
+```python
+from urllib.request import urlopen
+from urllib.error import HTTPError, URLError
+from bs4 import BeautifulSoup
+import re
+import random
+import time
+
+random.seed(time.time())
+
+
+def get_html(url, article, retries=3):
+    print(f"URL: {url.format(article)}")
+    for i in range(retries):
+        try:
+            return urlopen(url.format(article))
+        except HTTPError as e:
+            print(f"HTTP error: {e.code}")
+            if e.code == 502:
+                print(
+                    f"Attempt {i + 1} failed with error 502: Bad Gateway. Retrying..."
+                )
+                time.sleep(2)
+            else:
+                return None
+        except URLError as e:
+            print(f"URL error: {e.reason}")
+            return None
+    return None
+
+
+def get_links(html):
+    print(1)
+    if html:
+        print(2)
+        bs = BeautifulSoup(html, "html.parser")
+        return bs.find("div", {"id": "bodyContent"}).find_all(
+            "a", href=re.compile("^(/wiki/)((?!:).)*$")
+        )
+    else:
+        print("Failed to retrieve the web page.")
+
+
+def link_loop(articleUrl="/wiki/Kevin_Bacon"):
+    links = get_links(get_html("http://en.wikipedia.org{}", articleUrl))
+    while links:
+        newArticle = links[random.randint(0, len(links) - 1)].attrs["href"]
+        print(newArticle)
+        link_loop(newArticle)
+        break
+
+
+link_loop()
+```
+
+
+
+### 抓取整个网站
+
+由于外网原因，所以之后的例子就拿百度百科为例了
+
+#### 上述例子改为百度百科
+
+```python
+from urllib.request import urlopen
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote
+from urllib.parse import unquote
+from bs4 import BeautifulSoup
+import re
+import random
+import time
+
+random.seed(time.time())
+
+links = set()
+
+
+def get_html(url, article, retries=3):
+    print(f"URL: {url.format(article)}")
+    for i in range(retries):
+        try:
+            return urlopen(url.format(article))
+        except HTTPError as e:
+            print(f"HTTP error: {e.code}")
+            if e.code == 502:
+                print(
+                    f"Attempt {i + 1} failed with error 502: Bad Gateway. Retrying..."
+                )
+                time.sleep(2)
+            else:
+                return None
+        except URLError as e:
+            print(f"URL error: {e.reason}")
+            return None
+    return None
+
+
+def get_links(html):
+    global links
+    if html:
+        bs = BeautifulSoup(html, "html.parser")
+        for link in bs.find("div", {"class": "mainContent_dvM3V"}).find_all(
+            "a", href=re.compile("^(/item/)((?!:).)*$")
+        ):
+            links.add(link)
+
+        return links
+    else:
+        print("Failed to retrieve the web page.")
+
+
+def link_loop(articleUrl="/item/DC漫画/725892?fr=ge_ala"):
+    newArticleUrl = quote(articleUrl, safe="/?=&")
+    links = get_links(get_html("https://baike.baidu.com{}", newArticleUrl))
+    while links:
+        newArticle = list(links)[random.randint(0, len(links) - 1)].attrs["href"]
+        print(unquote(newArticle))
+        link_loop(unquote(newArticle))
+        break
+
+
+link_loop()
+```
+
+
+
+#### 链接去重
+
+使用set方法去重，注意global，可以对比set和列表的使用前后区别
+
+```python
+from urllib.request import urlopen
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote
+from bs4 import BeautifulSoup
+import re
+import random
+import time
+
+from urllib.request import Request
+
+random.seed(time.time())
+
+links = set()
+
+
+def get_html(url, article, retries=3):
+    print(f"URL: {url.format(article)}")
+    for i in range(retries):
+        try:
+            return urlopen(url.format(article))
+        except HTTPError as e:
+            print(f"HTTP error: {e.code}")
+            if e.code == 502:
+                print(
+                    f"Attempt {i + 1} failed with error 502: Bad Gateway. Retrying..."
+                )
+                time.sleep(2)
+            else:
+                return None
+        except URLError as e:
+            print(f"URL error: {e.reason}")
+            return None
+    return None
+
+
+def get_links(html):
+    global links
+    if html:
+        bs = BeautifulSoup(html, "html.parser")
+        for link in bs.find("div", {"class": "mainContent_dvM3V"}).find_all(
+            "a", href=re.compile("^(/item/)((?!:).)*$")
+        ):
+            links.add(link)
+
+        print(len(links))
+    else:
+        print("Failed to retrieve the web page.")
+
+get_links(
+    get_html(
+        "https://baike.baidu.com{}", quote("/item/DC漫画/725892?fr=ge_ala", safe="/?=&")
+    )
+)
+```
+
+**注意：**考虑一下递归的深度
+
+
+
+#### 收集网站数据
+
+以网站的标题为例
+
+```python
+from urllib.request import urlopen
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote
+from bs4 import BeautifulSoup
+import re
+import random
+import time
+
+from urllib.request import Request
+
+random.seed(time.time())
+
+links = set()
+
+
+def get_html(url, article, retries=3):
+    print(f"URL: {url.format(article)}")
+    for i in range(retries):
+        try:
+            return urlopen(url.format(article))
+        except HTTPError as e:
+            print(f"HTTP error: {e.code}")
+            if e.code == 502:
+                print(
+                    f"Attempt {i + 1} failed with error 502: Bad Gateway. Retrying..."
+                )
+                time.sleep(2)
+            else:
+                return None
+        except URLError as e:
+            print(f"URL error: {e.reason}")
+            return None
+    return None
+
+
+def get_links(html):
+    global links
+    if html:
+        bs = BeautifulSoup(html, "html.parser")
+
+        try:
+            print(bs.find("h1", {"class": "J-lemma-title"}).get_text())
+        except AttributeError:
+            print("页面少一些属性哈~")
+
+        for link in bs.find("div", {"class": "mainContent_dvM3V"}).find_all(
+            "a", href=re.compile("^(/item/)((?!:).)*$")
+        ):
+            links.add(link)
+
+        print(len(links))
+    else:
+        print("Failed to retrieve the web page.")
+
+
+get_links(
+    get_html(
+        "https://baike.baidu.com{}", quote("/item/DC漫画/725892?fr=ge_ala", safe="/?=&")
+    )
+)
+```
+
+
+
+#### 互联网抓取
+
+**注意：**内链和外链的检查（通俗的说就是内部网站和外部网站的处理，白名单等等一系列判断）
+
