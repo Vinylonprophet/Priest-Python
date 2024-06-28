@@ -941,3 +941,176 @@ crawler.parse(
 
 ## Scrapy
 
+这次来介绍非常好用的第三方框架——`Scrapy`
+
+### 安装Scrapy
+
+```python
+pip install Scrapy
+```
+
+#### 蜘蛛初始化
+
+> 一个`Scrapy`项目就是一个蜘蛛（spider），不用`Scrapy`抓取网页的程序就叫`Crawler`
+
+在目录中创建新的蜘蛛：
+
+```python
+scrapy startproject baikeSpider
+```
+
+创建完之后文件结构如下：
+
+- scrapy.cfg
+- baikeSpider
+  - spiders
+    - _ _ init.py _ _
+  - items.py
+  - middlewares.py
+  - piplines.py
+  - settings.py
+  - _ _ init.py_ _
+
+
+
+### 创建简易爬虫
+
+**步骤：**
+
+- 创建文件**article.py**（baikeSpider\baikeSpider\spiders\article.py）
+
+- 类的名称`ArticleSpider`和文件夹名`baikeSpider`不同，表明这个类在`baikeSpider`中专门用于抓取文章网页
+- 注意两个函数
+  - start_requests：Scrapy定义的程序入口，用于生成Scrapy用来抓取网站的Request对象
+  - parse是用户自定义的回调函数，通过callback=self.parse传递给Request对象
+
+- 运行指令（在对应文件夹）：scrapy runspider article.py
+
+```python
+import scrapy
+from scrapy.http import Response
+
+
+class ArticleSpider(scrapy.Spider):
+    name = "article"
+
+    def start_requests(self):
+        # urls = ["https://baike.baidu.com/item/DC%E6%BC%AB%E7%94%BB/725892?fr=ge_ala"]
+        urls = ["https://en.wikipedia.org/wiki/Kevin_Bacon"]
+        return [scrapy.Request(url=url, callback=self.parse) for url in urls]
+
+    def parse(self, response: Response):
+        url = response.url
+        title = response.css("h1 ::text").extract_first()
+        print("URL {}".format(url))
+        print("Title {}".format(title))
+```
+
+如果你没有翻墙的梯子，或者翻墙的梯子会导致DNS或者Proxy问题，那么可以用我注释掉的url，但这时会遇到一个问题（百度百科的 `robots.txt` 文件禁止了某些页面的爬取，因此你的请求被忽略了）
+
+**解决方法：**
+
+1. **尊重 robots.txt 文件**：
+
+   - 默认情况下，Scrapy 会遵循网站的 `robots.txt` 文件。可以通过修改 Scrapy 配置来忽略 `robots.txt`，不过这样做可能违反网站的爬虫规则。你可以在设置文件中将 `ROBOTSTXT_OBEY` 设置为 `False`：
+
+     ```
+     pythonCopy code# settings.py
+     ROBOTSTXT_OBEY = False
+     ```
+
+2. **处理被禁止的请求**：
+
+   - 检查 `robots.txt` 文件并根据其指引调整你的爬虫。例如，你可以选择性地抓取不受限制的页面。
+
+3. **动态内容加载**：
+
+   - 如果页面内容是通过 JavaScript 动态加载的，可以考虑使用诸如 Splash、Selenium 等工具来渲染页面。
+
+> 这时用第一种方法就能解决问题了
+
+
+
+### 带规则的抓取
+
+我们之前只是抓取了一个URL，还不具备寻找新网站的能力，所以我们需要用`Scrapy`的`CrawlSpider`来完善
+
+以下代码会少许的复杂，请一一对应的看
+
+**代码理解：**
+
+1. 没有使用`start_requests`函数，而是定义了两个列表`start_urls`和`allowed_domains`，告诉蜘蛛从哪抓取，以及哪些**域名应该保留**，哪些应该忽略
+2. `rules`列表，为链接的**保留**和**忽略**提供进一步说明，**正则 .*** 保留了所有链接
+3. 提取器
+   - `XPath`通常用于**获取包含子标签**
+   - `CSS`子标签的**文字会被忽略**
+
+```python
+from scrapy.linkextractors import LinkExtractor
+from scrapy.spiders import CrawlSpider, Rule
+
+count = 0
+
+
+class ArticlesSpider(CrawlSpider):
+    name = "articles"
+
+    allowed_domains = ["wikipedia.org"]
+    start_urls = ["https://en.wikipedia.org/wiki/Benevolent_dictator_for_life"]
+    rules = [Rule(LinkExtractor(allow=r".*"), callback="parse_items", follow=True)]
+
+    def parse_items(self, response):
+        global count
+        count += 1
+        url = response.url
+        title = response.css("h1 ::text").extract_first()
+        text = response.xpath("//div[@id='mw-content-text']//text()").extract()
+        lastUpdated = response.css("li#footer-info-lastmod ::text").extract_first()
+        lastUpdated = lastUpdated.replace("This page was last edited on ", "")
+        print("URL {}".format(url))
+        print("Title {}".format(title))
+        # print("Text {}".format(text))
+        print("Last Updated: {}".format(lastUpdated))
+        print("====================={}=====================".format(count))
+
+```
+
+**注意：**这个如果不按Ctrl+C或者关闭终端程序就会一直运行！！
+
+**详细解析：**
+
+1. Rule对象列表（定义了所有链接的过滤规则。当设置多个规则时，每个链接都要按顺序检查。匹配的**第一个规则**用来**决定如何处理**链接。如果链接不能匹配任何规则就会被忽略）
+   - link_extractor（必选参数，是一个LinkExtractor对象）
+   - callback（用来解析网页内容的参数）
+   - cb_kwargs（传入回调函数的参数字典。字典形式是{arg_name1: arg_value1, arg_name2: arg_value2}）
+   - follow（是否将当前页面种找到的链接添加到后面的抓取里，如果没提供回调函数，那么默认是True；如果提供了回调函数，则这个参数默认是False）
+2. LinkExtractor（一个简单的类，专门用于根据提供的规则识别和返回HTML内容页面中的**链接**）
+   - 可以扩展，可以增加自定义参数！
+   - 常用参数
+     - allow（允许匹配正则表达式的所有链接）
+     - deny（拒绝匹配正则表达式的所有链接）
+
+如果我的rules是这么写的能做什么？
+
+```python
+rules = [
+    Rule(
+        LinkExtractor(allow="^(/wiki/)((?!:).)*$"),
+        callback="parse_items",
+        follow=True,
+        cb_kwargs={"is_article": True},
+    ),
+    Rule(
+        LinkExtractor(allow=".*"),
+        callback="parse_items",
+        cb_kwargs={"is_article": False},
+    )
+]
+```
+
+那我可以通过is_article的值做不同的操作（写在回调函数中）
+
+
+
+### 创建Item
+

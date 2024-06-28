@@ -31,7 +31,7 @@ class Crawler:
         return BeautifulSoup(req.text, "html.parser")
 
     def safeGet(self, pageObj, selector):
-        # print(pageObj.select_one(".para_uWBUP"))
+        # print(pageObj.select_one("div .para_uWBUP"))
         # print(pageObj.select_one("h1"))
         selectedElems = pageObj.select_one(selector)
         if selectedElems is not None and len(selectedElems) > 0:
