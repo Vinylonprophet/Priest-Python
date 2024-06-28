@@ -767,3 +767,177 @@ get_links(
 
 **注意：**内链和外链的检查（通俗的说就是内部网站和外部网站的处理，白名单等等一系列判断）
 
+
+
+
+
+## 网络爬虫模型
+
+大型、可扩展的爬虫模型一般分为几种模式，学习这些模式可以大幅改善代码的可维护性和稳健性
+
+### 规划和定义对象
+
+提前规划数据模型，认真思考并规划究竟需要抓取什么信息以及如何进行存储
+
+
+
+### 处理不同的网站布局
+
+每个网站的解析函数基本上做的几件事情：
+
+- 选择标题元素并从标题中抽取文本
+- 选择文章的主要内容
+- 按需选择其他内容选项
+- 返回此前由字符串实例化的Content对象
+
+```python
+import requests
+from bs4 import BeautifulSoup
+
+
+class Content:
+    def __init__(self, url, title, body):
+        self.url = url
+        self.title = title
+        self.body = body
+
+
+def getPage(url):
+    req = requests.get(url)
+    return BeautifulSoup(req.text, "html.parser")
+
+
+def scrapeBrookings(url):
+    bs = getPage(url)
+    title = bs.find("h1").text
+    body = bs.find_all("div", {"class": "post-body"}).text
+    return Content(url, title, body)
+
+
+url = (
+    "https://www.brookings.edu/blog/future-development/2018/01/26/delivering-inclusive-urban-access-3-uncomfortable-truths"
+)
+content = scrapeBrookings(url)
+print("Title: {}".format(content.title))
+print("URL: {}".format(content.url))
+print("Body: {}".format(content.body))
+```
+
+现在一起写一个Crawler去爬任何网站的标题和内容
+
+> 非常重要的一个模板!
+
+```python
+import requests
+from bs4 import BeautifulSoup
+
+
+class Content:
+    def __init__(self, url, title, body):
+        self.url = url
+        self.title = title
+        self.body = body
+
+    def print(self):
+        print("URL: {}".format(self.url))
+        print("Title: {}".format(self.title))
+        print("Body: {}".format(self.body))
+
+
+class Website:
+    def __init__(self, name, url, titleTag, bodyTag):
+        self.name = name
+        self.url = url
+        self.titleTag = titleTag
+        self.bodyTag = bodyTag
+
+
+class Crawler:
+    def getPage(self, url):
+        try:
+            req = requests.get(url)
+        except requests.exceptions.RequestException:
+            return None
+        return BeautifulSoup(req.text, "html.parser")
+
+    def safeGet(self, pageObj, selector):
+        # print(pageObj.select_one(".para_uWBUP"))
+        # print(pageObj.select_one("h1"))
+        selectedElems = pageObj.select_one(selector)
+        if selectedElems is not None and len(selectedElems) > 0:
+            return "".join([elem.get_text() for elem in selectedElems])
+        return ""
+
+    def parse(self, site, url):
+        bs = self.getPage(url)
+        if bs is not None:
+            title = self.safeGet(bs, site.titleTag)
+            body = self.safeGet(bs, site.bodyTag)
+            if title != "" and body != "":
+                content = Content(url, title, body)
+                content.print()
+
+
+crawler = Crawler()
+
+siteData = [
+    [
+        "DC漫画",
+        "https://baike.baidu.com/item/DC%E6%BC%AB%E7%94%BB/725892?fr=ge_ala",
+        "h1",
+        ".para_uWBUP",
+    ],
+    [
+        "沙赞",
+        "https://baike.baidu.com/item/%E6%AF%94%E5%88%A9%C2%B7%E5%B7%B4%E7%89%B9%E6%A3%AE/20102445?fromtitle=%E6%B2%99%E8%B5%9E&fromid=13009441",
+        "h1",
+        ".para_uWBUP",
+    ],
+]
+
+websites = []
+
+for row in siteData:
+    websites.append(Website(row[0], row[1], row[2], row[3]))
+
+crawler.parse(
+    websites[0], "https://baike.baidu.com/item/DC%E6%BC%AB%E7%94%BB/725892?fr=ge_ala"
+)
+print("\n")
+crawler.parse(
+    websites[1],
+    "https://baike.baidu.com/item/%E6%AF%94%E5%88%A9%C2%B7%E5%B7%B4%E7%89%B9%E6%A3%AE/20102445?fromtitle=%E6%B2%99%E8%B5%9E&fromid=13009441",
+)
+```
+
+
+
+### 结构化爬虫
+
+以下由于作者都掌握了，想看相关代码请向作者借书/自行购买`Python网络爬虫权威指南`
+
+#### 通过搜索抓取网站
+
+- 大多数网站会通过参数在URL传递
+- 搜索后的其他结果链接也是个URL
+- 由此我们可以通过URL进行规范化
+
+
+
+#### 通过链接抓取网站
+
+通俗的讲就是设置内链外链的黑白名单再反复进行深度爬取
+
+
+
+#### 抓取多种类型的页面
+
+由于一个网站的内链会有很多种类，所以需要进行不同的处理，那么我们要解决的就是通过一些标识去分类再爬取
+
+- 可以选择一些缺失的特定字段判别
+- 可以通过标签页中特殊的元素或者选择器去识别
+
+
+
+## Scrapy
+
