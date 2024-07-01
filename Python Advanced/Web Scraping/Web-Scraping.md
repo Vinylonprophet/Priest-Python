@@ -1114,3 +1114,301 @@ rules = [
 
 ### 创建Item
 
+Scrapy提供了一个可以帮助组织已收集的item，将它们保存到带有明确定义的字段的自定义对象中
+
+[item定义模型参考文档](https://doc.scrapy.org/en/latest/topics/items.html)
+
+创建items.py文件
+
+```python
+import scrapy
+
+
+class Article(scrapy.Item):
+    url = scrapy.Field()
+    title = scrapy.Field()
+    text = scrapy.Field()
+    lastUpdated = scrapy.Field()
+```
+
+创建articleItems.py文件
+
+```python
+from scrapy.linkextractors import LinkExtractor
+from scrapy.spiders import CrawlSpider, Rule
+from items import Article
+
+
+class ArticleSpider(CrawlSpider):
+    name = "articleItems"
+    allowed_domains = ["wikipedia.org"]
+    start_urls = ["https://en.wikipedia.org/wiki/Benevolent_dictator_for_life"]
+    rules = [
+        Rule(
+            LinkExtractor(allow="(/wiki/)((?!:).)*$"),
+            callback="parse_items",
+            follow=True,
+        )
+    ]
+
+    def parse_items(self, response):
+        article = Article()
+        article["url"] = response.url
+        article["title"] = response.css("h1 ::text").extract_first()
+        article["text"] = response.xpath(
+            "//div[@id='mw-content-text']//text()"
+        ).extract()
+        lastUpdated = response.css("li#footer-info-lastmod ::text").extract_first()
+        article["lastUpdated"] = lastUpdated.replace(
+            "This page was last edited on ", ""
+        )
+        return article
+```
+
+
+
+### 输出Item
+
+**Scrapy可以将信息保存为不同格式，例如CSV，JSON，XML文件**
+
+scrapy runspider articleItems.py -o articles.csv -t csv
+
+scrapy runspider articleItems.py -o articles.json -t json
+
+scrapy runspider articleItems.py -o articles.xml -t xml
+
+
+
+### Item管线组件
+
+虽然Scrapy是`单线程`的，但是能够`异步发出`和`处理多个请求`，这样会比之前介绍的爬虫快~
+
+Scrapy的item管线组件可以进一步提高网页爬取速度，因为可以**在等待请求返回结果的过程中完成所有数据**，而不是**等待数据处理完成之后再发起新请求**。
+
+使用步骤：
+
+1. 为了创建一个item管线组件，用到创建仓库时自带的`settings.py`文件，注意注释的**ITEM_PIPELINES**打开
+
+   ```python
+   #ITEM_PIPELINES = {
+   #    "baikeSpider.pipelines.BaikespiderPipeline": 300,
+   #}
+   ```
+
+   并且改为**WikispiderPipeline**，因为我们现在做的操作是爬取wiki百科，所以我们将会创建一个**WikispiderPipeline**类
+
+   ```python
+   ITEM_PIPELINES = {
+      "baikeSpider.pipelines.WikispiderPipeline": 300,
+   }
+   ```
+
+   **注意：**
+
+   1. 300这个整数是指管线组件的顺序，1，2，3 ··· ··· 一直到1000，**管线组件按照顺序方式运行**
+   2. 增加管线组件类可以在收集数据的同时，由**管线组件承担数据处理的重任**
+
+2. Scrapy必须要求返回一个item，所以我们还是要在parse_items中进行**数据提取**，然后传给**管线**
+
+   `articlePipelines.py`
+
+   ```python
+   from scrapy.linkextractors import LinkExtractor
+   from scrapy.spiders import CrawlSpider, Rule
+   from baikeSpider.spiders.items import Article
+   
+   
+   class ArticleSpider(CrawlSpider):
+       name = "articlePipelines"
+       allowed_domains = ["wikipedia.org"]
+       start_urls = ["https://en.wikipedia.org/wiki/Benevolent_dictator_for_life"]
+       rules = [
+           Rule(
+               LinkExtractor(allow="(/wiki/)((?!:).)*$"),
+               callback="parse_items",
+               follow=False,
+           )
+       ]
+   
+       def parse_items(self, response):
+           article = Article()
+           article["url"] = response.url
+           article["title"] = response.css("h1 ::text").extract_first()
+           article["text"] = response.xpath(
+               "//div[@id='mw-content-text']//text()"
+           ).extract()
+           article["lastUpdated"] = response.css(
+               "li#footer-info-lastmod ::text"
+           ).extract_first()
+           print(article)
+           return article
+   ```
+
+3. 把创建仓库自带的`pipelines.py`文件给写成新的组件代码
+
+   `pipelines.py`
+
+   ```python
+   from datetime import datetime
+   from baikeSpider.spiders.items import Article
+   from string import whitespace
+   
+   
+   class WikispiderPipeline(object):
+       def process_item(self, article, spider):
+           dateStr = article["lastUpdated"]
+           article["lastUpdated"] = article["lastUpdated"].replace(
+               "This page was last edited on ", ""
+           )
+           article["lastUpdated"] = article["lastUpdated"].strip()
+           article["lastUpdated"] = datetime.strptime(
+               article["lastUpdated"], "%d %B %Y, at %H:%M"
+           )
+   
+           article["text"] = [line for line in article["text"] if line not in whitespace]
+           article["text"] = "".join(article["text"])
+           return article
+   ```
+
+   **process_item**是必选方法，Scrapy用这个方法异步处理收集到的Items
+
+4. items.py文件保持不变
+
+   ```python
+   import scrapy
+   
+   
+   class Article(scrapy.Item):
+       url = scrapy.Field()
+       title = scrapy.Field()
+       text = scrapy.Field()
+       lastUpdated = scrapy.Field()
+   ```
+
+5. 运行指令：
+
+   > scrapy crawl articlePipelines -o articles.csv -t csv
+
+**总结：**
+
+1. 两个地方处理数据，一个是spider中的**parse_items**方法，另一个是管线组件中的**process_item**
+
+2. 如果解析要花费很长时间，可以考虑将数据类型移动到管线组件中，并且增加一个item类过滤
+
+   ```python
+   def process_item(self, item, spider):
+       if isinstance(item, Article):
+           # 面向具体Article类型数据解析
+   ```
+
+
+
+### Scrapy日志管理
+
+`settings.py`文件中新增代码
+
+```python
+LOG_LEVEL = "ERROR"
+```
+
+日志等级制度如下：
+
+- CRITICAL（关键）
+- ERROR（错误）
+- WARNING（警告）
+- DEBUG（调试）
+- INFO（信息）
+
+如果要输出日志文件就运行这行指令：
+
+```python
+scrapy crawl aritcles -s LOG_FILE=wiki.org
+```
+
+
+
+### 更多资源
+
+学习书记推荐《精通Python爬虫框架Scrapy》
+
+
+
+### 作者踩坑分享
+
+> 爬取这个网站的时候心血来潮就用Scrapy框架来爬取 https://www.sylvanianfamilies.com/zh-hk/catalog/categorieslist.php?category_id=1
+
+代码其实也写得差不多了：
+
+```python
+import json
+from scrapy import FormRequest, Request, Selector
+from scrapy.linkextractors import LinkExtractor
+from scrapy.spiders import CrawlSpider, Rule
+from sylvanianFamiliesSpider.spiders.items import Good
+
+
+class GoodsSpider(CrawlSpider):
+    name = "GoodItems"
+    allowed_domains = ["sylvanianfamilies.com"]
+    start_urls = [
+        "https://www.sylvanianfamilies.com/zh-hk/catalog/categorieslist.php?category_id=1"
+    ]
+    rules = [
+        Rule(
+            LinkExtractor(allow=r".*item_detail.*"),
+            callback="parse_items",
+            follow=False,
+            cb_kwargs={"is_good": True},
+        ),
+    ]
+
+    def parse_items(self, response, is_good):
+        good = Good()
+        self.logger.info(f"Parsing item page: {response.url}")
+
+        if is_good:
+            l_content = response.xpath('//*[@id="l-content"]').extract_first()
+            if l_content:
+                selector = Selector(text=l_content)
+                good["name"] = selector.xpath("//h1/text()").extract_first()
+                if "name" in good:
+                    good["name"] = good["name"].strip()
+                good["category"] = selector.css(
+                    ".m-icon-item .m-icon-s ::text"
+                ).extract_first()
+                good["introduction"] = " ".join(
+                    [
+                        Selector(text=part).xpath("string()").get()
+                        for part in selector.css(".m-txt-p.m-box-line2").getall()
+                    ]
+                )
+                good["product_id"] = selector.css(".m-table-gr td ::text").get()
+
+                img_urls = selector.css(".nav-slide img::attr(src)").extract()
+                good["img_urls"] = img_urls
+                return good
+
+        print(f"URL: {response.url}")
+```
+
+但是写到这里才发现，这个网站有的页面需要点击一个叫做**更多内容**的按钮才能显示更多的product，那我就裂开了，试图模拟页面的点击事件去拉取更多的产品。。。
+
+终于最后问chatgpt。。。
+
+> **Ask:**
+>
+> scrapy框架可以模拟点击事件吗？
+>
+> **Answer:**
+>
+> Scrapy本身是一个基于Python的爬虫框架，它主要用于抓取静态页面数据。对于需要模拟点击事件才能获取内容的网站，Scrapy通常不能直接处理，因为它无法执行JavaScript或模拟用户交互动作。
+>
+> 不过，你可以考虑以下几种方法来处理需要点击事件的情况：
+>
+> 1. **分析XHR请求**: 使用浏览器开发者工具分析点击事件后发送的XHR（XMLHttpRequest）请求，直接模拟这些请求来获取数据。
+> 2. **使用Splash或Selenium**: Splash是一个JavaScript渲染服务，可以与Scrapy结合使用，用来处理需要JavaScript渲染的页面。另外，Selenium是一个自动化测试工具，可以模拟用户在浏览器中的操作，也可以与Scrapy集成来处理点击事件。
+> 3. **直接分析API**: 如果网站有提供API接口，通常这是获取数据的更好方式，因为API返回的数据更结构化，而且不需要模拟点击事件。
+>
+> 你可以根据具体的网站和需求选择最合适的方法来解决。
+
+所以最后还是用API的方式去解决这个问题，当然目前没有深入学习Scrapy我也无法判断ChatGPT的这个回答是对是错！

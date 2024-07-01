@@ -63,9 +63,11 @@ ROBOTSTXT_OBEY = False
 
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-#ITEM_PIPELINES = {
-#    "baikeSpider.pipelines.BaikespiderPipeline": 300,
-#}
+ITEM_PIPELINES = {
+   "baikeSpider.pipelines.WikispiderPipeline": 300,
+}
+RETRY_TIMES = 3  # 设置重试次数
+RETRY_HTTP_CODES = [500, 502, 503, 504, 522, 524, 408]  # 需要重试的 HTTP 状态码
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html

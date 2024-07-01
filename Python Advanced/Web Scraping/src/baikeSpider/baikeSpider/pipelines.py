@@ -5,9 +5,29 @@
 
 
 # useful for handling different item types with a single interface
-from itemadapter import ItemAdapter
+# from itemadapter import ItemAdapter
 
 
-class BaikespiderPipeline:
-    def process_item(self, item, spider):
-        return item
+# class BaikespiderPipeline:
+#     def process_item(self, item, spider):
+#         return item
+
+from datetime import datetime
+from baikeSpider.spiders.items import Article
+from string import whitespace
+
+
+class WikispiderPipeline(object):
+    def process_item(self, article, spider):
+        dateStr = article["lastUpdated"]
+        article["lastUpdated"] = article["lastUpdated"].replace(
+            "This page was last edited on ", ""
+        )
+        article["lastUpdated"] = article["lastUpdated"].strip()
+        article["lastUpdated"] = datetime.strptime(
+            article["lastUpdated"], "%d %B %Y, at %H:%M"
+        )
+
+        article["text"] = [line for line in article["text"] if line not in whitespace]
+        article["text"] = "".join(article["text"])
+        return article
