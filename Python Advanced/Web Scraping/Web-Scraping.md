@@ -1412,3 +1412,95 @@ class GoodsSpider(CrawlSpider):
 > 你可以根据具体的网站和需求选择最合适的方法来解决。
 
 所以最后还是用API的方式去解决这个问题，当然目前没有深入学习Scrapy我也无法判断ChatGPT的这个回答是对是错！
+
+
+
+## 存储数据
+
+如果要创建一个网站的后端服务或者自己创建API，需要让爬虫把数据写入数据库
+
+如果要快速简单的手机网上的文档存到硬盘里，那么需要创建一个文件流
+
+### 媒体文件
+
+两中存储方式，保存URL和保存源文件
+
+URL保存优点：
+
+- 节流，不用下文件
+- 节约存储空间
+- 存URL的代码容易
+- 降低主机服务器的负载
+
+URL保存缺点：
+
+- 网站会采取`盗链`措施
+- 链接根据别人服务器走
+- 盗链的目标地址很容易改变
+- 下载文件（比如css，js，MP4等等）可以做到模仿浏览器访问，更真实
+
+**从远程下载图片：**
+
+```python
+from urllib.request import urlretrieve, urlopen
+from bs4 import BeautifulSoup
+
+html = urlopen("https://pythonscraping.com/")
+bs = BeautifulSoup(html, "html.parser")
+imageLocation = bs.find("div", {"class": "pagelayer-image-holder"}).find("img")["src"]
+urlretrieve(imageLocation, "logo.jpg")
+```
+
+**把网站上所有src属性的内部文件下载下来：**
+
+```python
+from urllib.request import urlretrieve, urlopen
+from bs4 import BeautifulSoup
+import os
+
+downloadDirectory = "download"
+baseUrl = "https://pythonscraping.com"
+
+
+def getAbsoluteURL(baseUrl, source):
+    if source.startswith("https://www."):
+        url = "https://{}".format(source[12:])
+    elif source.startswith("https://"):
+        url = source
+    elif source.startswith("www."):
+        url = source[4:]
+        url = "https://{}".format(source)
+    else:
+        url = "{}/{}".format(baseUrl, source)
+    if baseUrl not in url:
+        return None
+    return url
+
+
+def getDownloadPath(baseUrl, absoluteUrl, downloadDirectory):
+    path = absoluteUrl.replace("www.", "")
+    path = path.replace(baseUrl, "")
+    path = downloadDirectory + path.split("?")[0]
+    directory = os.path.dirname(path)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
+    return path
+
+
+html = urlopen("https://pythonscraping.com")
+bs = BeautifulSoup(html, "html.parser")
+downloadList = bs.findAll(src=True)
+
+for download in downloadList:
+    fileUrl = getAbsoluteURL(baseUrl, download["src"])
+    print(fileUrl)
+    if fileUrl is not None:
+        urlretrieve(fileUrl, getDownloadPath(baseUrl, fileUrl, downloadDirectory))
+```
+
+这个程序显示对`URL链接进行清理和标准化`，获取文件绝对路径`（去掉外链）`，最后全部下载到downloaded文件夹里
+
+
+
+### 把数据存储岛CSV
