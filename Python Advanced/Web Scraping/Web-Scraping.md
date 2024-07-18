@@ -1503,4 +1503,164 @@ for download in downloadList:
 
 
 
-### 把数据存储岛CSV
+### 把数据存储到CSV
+
+**CSV**是存储`表格数据`的常用文件格式，CSV的每一行都用**换行符**分隔，列与列之间用逗号分隔
+
+python的csv库支持非常简单的修改CSV文件，甚至可以从零开始创建CSV文件
+
+```python
+import csv
+
+csvFile = open("dist/5.3_test.csv", "w+")
+try:
+    writer = csv.writer(csvFile)
+    writer.writerow(("column1", "column2", "column3"))
+    for i in range(10):
+        writer.writerow((i, i + 2, i * i))
+finally:
+    csvFile.close()
+```
+
+**注意：**如果csv文件已经存在了，那么将覆写该文件
+
+
+
+一个获取HTML表格并写入CSV文件的代码
+
+```python
+import csv
+from urllib.request import urlopen
+from bs4 import BeautifulSoup
+
+
+html = urlopen("http://en.wikipedia.org/wiki/Comparison_of_text_editors")
+bs = BeautifulSoup(html, "html.parser")
+
+table = bs.find_all("table", {"class": "wikitable"})[0]
+rows = table.find_all("tr")
+
+csvFile = open("dist/5.4_test.csv", "wt+", encoding="utf-8")
+writer = csv.writer(csvFile)
+try:
+    for row in rows:
+        csvRow = []
+        for cell in row.find_all(["td", "th"]):
+            csvRow.append(cell.get_text())
+        writer.writerow(csvRow)
+finally:
+    csvFile
+```
+
+
+
+### MySQL
+
+爬取结束录入数据库，这一部分因为作者最近用的是**MongoDB**，所以先不进行具体学习，感兴趣的可以翻到书本第75页
+
+这里有个推荐的项目例子：
+
+每一小时检查https://isitchristmas.com网站，如果页面信息不是NO，就发送一封电子邮件到邮箱，通知你今天是圣诞节
+
+
+
+## 读取文档
+
+### 纯文本
+
+```python
+from urllib.request import urlopen
+
+textPage = urlopen("https://www.pythonscraping.com/pages/warandpeace/chapter1.txt")
+print(textPage.read())
+```
+
+
+
+#### 文本和全球网络
+
+了解UTF-8和ISO标准，如果访问到一些文本，你需要转换成UTF-8
+
+```python
+from urllib.request import urlopen
+
+textPage = urlopen("https://www.pythonscraping.com/pages/warandpeace/chapter1-ru.txt")
+print(str(textPage.read(), "utf-8"))
+```
+
+统一对之后的文本转换成UTF-8，至于要不要这么做，以后**可以打开inspect的meta标签看编码格式**
+
+```python
+html = urlopen("http://en.wikipedia.org/wiki/Python_(programming_language)")
+bs = BeautifulSoup(html, "html.parser")
+content = bs.find('div', {"id": "mw-content-text"}).get_text()
+content = bytes(content, 'UTF-8')
+content = content.decode('UTF-8')
+```
+
+
+
+### CSV
+
+python的csv库主要是面向本地csv文件，如果我们要抓取在线的csv文件可以参考下面的例子
+
+```python
+from urllib.request import urlopen
+from io import StringIO
+import csv
+
+data = (
+    urlopen("http://pythonscraping.com/files/MontyPythonAlbums.csv")
+    .read()
+    .decode("ascii", "ignore")
+)
+dataFile = StringIO(data)
+csvReader = csv.reader(dataFile)
+
+for row in csvReader:
+    print(row)
+```
+
+这时候我们发现输出了header行，参考以下代码解决这一问题
+
+```python
+from urllib.request import urlopen
+from io import StringIO
+import csv
+
+data = (
+    urlopen("http://pythonscraping.com/files/MontyPythonAlbums.csv")
+    .read()
+    .decode("ascii", "ignore")
+)
+dataFile = StringIO(data)
+csvReader = csv.DictReader(dataFile)
+
+for row in csvReader:
+    print(row)
+```
+
+与csvReader相比，DictReader会花费多一点点时间，但是我们不在乎这几微秒
+
+
+
+### PDF
+
+不常用，参考书本P100
+
+
+
+### 微软Word和.docx
+
+不常用，参考书本P102
+
+大致流程：BytesIO 读成一个二进制文件对象 -> 用python标准库 zipfile解压（所有的.docx都是经过压缩的） -> document.read('word/document.xml') 变成xml文件
+
+之后的提取请自己参考
+
+
+
+## 数据清洗
+
+### 编写代码清洗数据
+
