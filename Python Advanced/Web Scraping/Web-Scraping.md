@@ -1664,3 +1664,267 @@ for row in csvReader:
 
 ### 编写代码清洗数据
 
+和处理代码异常一样，我们也应该编写`预防性`代码来处理意外情况
+
+接下来的内容会提到2-gram和3-gram：
+
+- 2-gram 是指由两个连续元素（通常是词或字符）组成的子序列
+- 3-gram 是指由三个连续元素组成的子序列
+
+总的来说，n-gram 是一种有效的工具，用于捕捉文本中的局部结构和模式
+
+下面代码将返回在维基百科词条 **Python Programming language** 中找到的2-gram列表
+
+```python
+from urllib.request import urlopen
+from bs4 import BeautifulSoup
+
+
+def getNgrams(content, n):
+    content = content.split(" ")
+    output = []
+    for i in range(len(content) - n + 1):
+        output.append(content[i : i + n])
+    return output
+
+
+html = urlopen("http://en.wikipedia.org/wiki/Python_(programming_language)")
+bs = BeautifulSoup(html, "html.parser")
+content = bs.find("div", {"id": "mw-content-text"}).get_text()
+ngrams = getNgrams(content, 2)
+print(ngrams)
+print("2-grams count is: " + str(len(ngrams)))
+```
+
+我们用一些正则表达式来**移除转义字符(\n)**，再把**Unicode字符过滤**掉，升级后变成
+
+```python
+from urllib.request import urlopen
+from bs4 import BeautifulSoup
+import re
+
+
+def getNgrams(content, n):
+    content = re.sub("\n|[[\d+\]]", " ", content)
+    content = bytes(content, "UTF-8")
+    content = content.decode("ascii", "ignore")
+    content = content.split(" ")
+    content = [word for word in content if word != ""]
+    output = []
+    for i in range(len(content) - n + 1):
+        output.append(content[i : i + n])
+    return output
+
+
+html = urlopen("http://en.wikipedia.org/wiki/Python_(programming_language)")
+bs = BeautifulSoup(html, "html.parser")
+content = bs.find("div", {"id": "mw-content-text"}).get_text()
+ngrams = getNgrams(content, 2)
+print(ngrams)
+print("2-grams count is: " + str(len(ngrams)))
+```
+
+接下来我们保留单词中间的连字符，去除空字符串后面带有标点符号的字符串，同时不希望是一句句子内的词，而不会出现['management', 'It']的这种无效2-gram
+
+参考以下代码
+
+```python
+from urllib.request import urlopen
+from bs4 import BeautifulSoup
+import re
+import string
+
+
+def cleanSentence(sentence):
+    sentence = sentence.split(" ")
+    sentence = [word.strip(string.punctuation + string.whitespace) for word in sentence]
+    sentence = [
+        word
+        for word in sentence
+        if len(word) > 1 or (word.lower() == "a" or word.lower() == "i")
+    ]
+    return sentence
+
+
+def cleanInput(content):
+    content = re.sub("\n|\[[\d+\]]", " ", content)
+    content = bytes(content, "UTF-8")
+    content = content.decode("ascii", "ignore")
+    sentences = content.split(". ")
+    return [cleanSentence(sentence) for sentence in sentences]
+
+
+def getNgramsFromSentence(content, n):
+    output = []
+    for i in range(len(content) - n + 1):
+        output.append(content[i : i + n])
+    return output
+
+
+def getNgrams(content, n):
+    content = cleanInput(content)
+    ngrams = []
+    for sentence in content:
+        ngrams.extend(getNgramsFromSentence(sentence, n))
+    return ngrams
+
+
+html = urlopen("http://en.wikipedia.org/wiki/Python_(programming_language)")
+bs = BeautifulSoup(html, "html.parser")
+content = bs.find("div", {"id": "mw-content-text"}).get_text()
+ngrams = getNgrams(content, 2)
+print(ngrams)
+print("2-grams count is: " + str(len(ngrams)))
+```
+
+cleanInput是移除所有换行符和引用，基于`句点+空格`将文本分割成句子
+
+cleanSentence将句子分割成单词，去除标点符号和空白，去除除I和a之外的单字符单词
+
+string.punctuation获取所有的标点符号
+
+string.whitespace如果你print的话看不到输出什么，但是包含空白字符，不间断空格，制表符，换行符
+
+```python
+item.strip(string.punctuation)
+```
+
+此方法会去掉单词中所有的标点符号
+
+
+
+#### 数据标准化
+
+数据标准化得保证清洗后的数据在语言学上和逻辑学上和很多格式都一致，比如yy-mm-dd和yy/mm/dd一致
+
+
+
+### 数据存储后再清洗
+
+本章主要介绍了OpenRefine这个可视化程序，有兴趣请自己看书第111页
+
+
+
+## 自然语言处理
+
+当你浏览器中搜索东西的时候，会显示相关内容，如何做到的呢？
+
+### 概括数据
+
+网站用n-gram模型把文章分成许多单词，重复次数较多的单词就提取出来
+
+
+
+### 马尔可夫模型
+
+此块以及本章后面的内容不作为重点学习内容，略过
+
+
+
+## 穿越网页表单与登录窗口进行抓取
+
+### Python Requests库
+
+`Requests`库就是一个擅长处理复杂的HTTP请求、cookie、header（响应头和请求头）等内容的Python第三方库
+
+
+
+### 提交一个基本表单
+
+简单，看代码
+
+```python
+import requests
+
+params = {"firstname": "Wu", "lastname": "Vinylon"}
+
+response = requests.post(
+    "https://pythonscraping.com/pages/files/processing.php",
+    data=params,
+)
+print(response.text)
+```
+
+
+
+### 单选按钮、复选框和其他输入
+
+最简单的方法是使用浏览器的inspector，具体看书本P135
+
+
+
+### 提交文件和图像
+
+提交图片的话就是用
+
+```python
+files = {'uploadFile': open('files/python.png'， 'rb')}
+requests.post('url', files=files)
+```
+
+
+
+### 处理登录和cookie
+
+Requests库跟踪cookie
+
+```python
+import requests
+
+params = {"username": "Vinylon", "password": "password"}
+
+response = requests.post(
+    "https://pythonscraping.com/pages/cookies/welcome.php",
+    data=params,
+)
+print("Cookie is set to:")
+print(response.cookies.get_dict())
+print("Going to profile page...")
+response = requests.get(
+    "http://pythonscraping.com/pages/cookies/profile.php", cookies=response.cookies
+)
+print(response.text)
+```
+
+如果不想换cookie或者一开始就不想有cookie这个变量，可以选择Session
+
+```python
+import requests
+
+session = requests.Session()
+
+params = {"username": "Vinylon", "password": "password"}
+
+response = session.post(
+    "https://pythonscraping.com/pages/cookies/welcome.php",
+    data=params,
+)
+print("Cookie is set to:")
+print(response.cookies.get_dict())
+print("Going to profile page...")
+response = session.get("http://pythonscraping.com/pages/cookies/profile.php")
+print(response.text)
+```
+
+
+
+### HTTP基本接入认证
+
+在发明cookie前，最常用的是**HTTP基本接入认证**，Requests库有专门的**auth**模块来处理这种情况，看看下面的代码
+
+```python
+import requests
+from requests.auth import HTTPBasicAuth
+
+session = requests.Session()
+
+auth = HTTPBasicAuth("Vinylon", "password")
+
+response = session.post(
+    "http://pythonscraping.com/pages/auth/login.php",
+    auth=auth,
+)
+
+print(response.text)
+```
+
