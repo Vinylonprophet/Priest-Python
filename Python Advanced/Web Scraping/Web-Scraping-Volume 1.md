@@ -1,4 +1,4 @@
-# Web-Scraping
+# Web-Scraping-Volume 1
 
 ## 初见爬虫
 
@@ -1928,3 +1928,184 @@ response = session.post(
 print(response.text)
 ```
 
+
+
+## 抓取JavaScript
+
+目前网上遇到的客户端语言只有两种`ActionScript`和`JavaScript`，其中ActionScript可以忽略不计，所以本章我们将介绍JavaScript
+
+
+
+### JavaScript介绍
+
+作者是前端科班出生，这部分请自己研究——P140
+
+
+
+#### 常用JavaScript库
+
+##### jQuery
+
+如果网站使用的jQuery框架，那么抓取数据的时候要非常小心，因为HTML内容是jQuery执行之后才会显示
+
+所以用传统方法抓取，只能获得JavaScript代码运行前的内容
+
+
+
+##### Google Analytics
+
+这个是最受欢迎的用户跟踪工具，如何判断页面是否用了这个库，可以观察是否有这样的类似代码：
+
+```javascript
+var _gap = _gap || [];
+
+_gap.push(['_setAccount', 'UA-XXXXXX-X']);
+_gap.push(['_trackPageview']);
+_gap.push(['_gapTrackBounceViaTime', 10]);
+_gap.push(['_gapTrackBounceViaScroll', 50]);
+_gap.push(['_gapTrackReads', 20, 30]);
+_gap.push(['_gapTrackLinkClicks']);
+_gap.push(['_gapTrackMaxScroll', 25]);
+
+(function() {
+	var gap = document.createElement('script');
+	gap.async = true;
+	gap.type = 'text/javascript';
+	gap.src = '/bower_components/gap/dst/gap.min.js'; // Change, if needed.
+
+	var s = document.getElementsByTagName('script')[0];
+	s.parentNode.insertBefore(gap, s);
+})();
+```
+
+这段代码处理用于跟踪页面访问的Google Analytics的cookies
+
+有时候对于设计用于执行JavaScript处理和处理cookie的爬虫而言会是一个问题
+
+如果你不想让这种网站知道你在抓取它的数据，要确保把这些分析工具的cookie或者所有的cookie关掉
+
+
+
+##### Google Maps
+
+Python可以轻松抽取所有位置再google.maps.LatLng()的坐标，生成一组经纬度坐标值
+
+
+
+### Ajax和动态HTML
+
+截至目前，我们与Web服务器通信的唯一方式，就是发送**HTTP请求获取新页面**，如果提交表单/从服务器获取新信息，网站页面不需要重新加载的话，那么说明我们所访问的网站很有可能用了Ajax技术
+
+Ajax全程Asynchronous Javascript and XML （异步JavaScript和XML）
+
+DHTM（dynamic）会更改页面内容
+
+有时候页面在不更改URL的情况下会重定向到另一个页面
+
+这些都是因为爬虫没有执行网站的JavaScript脚本，导致和我们在浏览器中看到的完全不一样
+
+**解决方法：**
+
+1.  直接从JavaScript中抓取内容
+2. 用python第三方库执行JavaScript
+
+
+
+#### 用Selenium执行JavaScript
+
+**功能：**
+
+1. 自动加载网站
+2. 获取数据
+3. 页面截屏
+4. 判断网站做了什么操作
+
+
+
+**缺点：**
+
+Selenium自己不带浏览器，需要和第三方浏览器结合才能运行
+
+
+
+**处理方式：**
+
+使用`PhantomJS`代替真实浏览器，在后台默默运行
+
+
+
+PhantomJS是一个**无头浏览器**，会把网站加载到内存并执行页面上的Javascript，但不会向用户展示页面的图形界面，把Selenium和PhatomJS结合在一起就可以运行一个非常强大的网络爬虫来处理`cookie`、`JavaScript`、`header`以及任何我想做的事情
+
+Selenium是一个在WebDriver上调用的API，WebDriver有点像可以加载网站的浏览器，也可以像BeautifulSoup一样用来查找页面元素，与页面元素进行交互，以及其他动作来运行网络爬虫
+
+
+
+看到这一步的问题是什么呢？PhantomJS被Selenium废弃了。。。
+
+所以作者写了一组用Chrome来执行的代码：
+
+```python
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+import time
+
+
+chrome_options = Options()
+chrome_options.add_argument("--headless")  # 无头模式运行
+chrome_options.add_argument("--disable-gpu")  # 禁用 GPU 加速（可选）
+chrome_options.add_argument("--no-sandbox")  # 在某些情况下以 root 身份运行时需要
+chrome_options.add_argument("--ignore-certificate-errors")  # 忽略证书错误
+
+driver_path = "C:\Program Files\Google\Chrome\Application\chromedriver.exe"
+
+service = Service(executable_path=driver_path)
+
+driver = webdriver.Chrome(service=service, options=chrome_options)
+driver.get("https://pythonscraping.com/pages/javascript/ajaxDemo.html")
+
+time.sleep(5)
+print(driver.find_element("id", "content").text)
+driver.quit()
+```
+
+driver_path需要下载对应chrome版本的chromedriver，同时记得放在同一级目录下
+
+**注意：**Selenium选择器与BS4的也不同
+
+
+
+如果把time.sleep(5)改成1，那么就会失败，但是5的时间又太长了，所以有了以下更优化的代码（Selenium不断检查某个元素是否存在，这里就是id为loadedButton的按钮）
+
+```python
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+
+chrome_options = Options()
+chrome_options.add_argument("--headless")  # 无头模式运行
+chrome_options.add_argument("--disable-gpu")  # 禁用 GPU 加速（可选）
+chrome_options.add_argument("--no-sandbox")  # 在某些情况下以 root 身份运行时需要
+chrome_options.add_argument("--ignore-certificate-errors")  # 忽略证书错误
+
+driver_path = "C:\Program Files\Google\Chrome\Application\chromedriver.exe"
+
+service = Service(executable_path=driver_path)
+
+driver = webdriver.Chrome(service=service, options=chrome_options)
+driver.get("https://pythonscraping.com/pages/javascript/ajaxDemo.html")
+
+try:
+    element = WebDriverWait(driver, 10).until(
+        EC.presence_of_all_elements_located((By.ID, "loadedButton"))
+    )
+finally:
+    print(driver.find_element("id", "content").text)
+    driver.quit()
+```
+
+`WebDriverWait`和`expected_conditions`两个模块组合起来构成了Selenium的**隐式等待**
