@@ -658,3 +658,60 @@ print(driver.page_source)
 
 
 
+## 利用API抓取数据（P152）
+
+我们可以不用理解JavaScript，直接获取数据源：`生成数据的API`
+
+**备注：**作者大多都会，所以不细写了
+
+
+
+### API概述
+
+API文档通常将路由或**端点**描述为可以请求的URL，变量参数要么是URL路径，要么是GET请求的参数
+
+淘宝IP地址（http://ip.taobao.com）提供了一个简单易用的API，能将IP地址翻译成实际的物理地址，可以输入以下地址发起一个简单的API请求：
+
+http://ip.taobao.com/service/getIpInfo.php?ip=50.78.253.58
+
+
+
+#### HTTP和API
+
+HTTP从服务器获取信息的四种方式（其实有更多）：
+
+- GET
+- POST
+- PUT
+- DELETE
+
+
+
+#### 更多关于API响应的介绍
+
+API的重要特性是会返回良好格式的响应，最常见的是XML和JSON
+
+
+
+### 解析JSON数据
+
+用json.loads(...)是将json转换为python中的字典
+
+
+
+### 无文档的API
+
+作者懂，自己翻P157
+
+
+
+### API与其他数据源结合
+
+自己看
+
+
+
+### 再说一点API
+
+自己看
+
