@@ -800,3 +800,113 @@ time.sleep(3)
 - 登陆网站检查**Cookie**
 - HTTP错误，**403**很可能把你IP当作机器人，不再接受请求
 
+
+
+## 用爬虫测试网站
+
+这一章介绍测试的基础知识，以及如何用Python网络爬虫测试各种简单或复杂的网站
+
+按需看P196
+
+
+
+## 并行网页抓取
+
+在一些场景中使用并行网页抓取或并行线程/进程仍有一些好处：
+
+- 从多个数据源而不只是一个数据源收集数据
+- 收集数据的同时，在已收集到的数据上执行时间更长/更复杂的操作
+- 从大型Web服务收集数据，如果已经付费，并且创建多个链接是允许的情况
+
+
+
+### 进程与线程
+
+Python既支持多进程（**mutiprocessing**），也支持多线程(**mutithreading**)；多线程可以共享一块内存，多进程不可以
+
+Python的**全局解释锁**（global interpreter lock，GIL）会组织多个线程同时运行同一行代码，GIL确保所有进程共享的内存不会中断
+
+
+
+### 多线程抓取
+
+代码：
+
+```python
+import _thread
+import time
+
+
+def print_time(threadName, delay, iterations):
+    start = int(time.time())
+    for i in range(0, iterations):
+        time.sleep(delay)
+        seconds_elapsed = str(int(time.time()) - start)
+        print("{} {}".format(seconds_elapsed, threadName))
+
+
+try:
+    _thread.start_new_thread(print_time, ("Bella", 3, 33))
+    _thread.start_new_thread(print_time, ("Echo", 5, 20))
+    _thread.start_new_thread(print_time, ("VL", 1, 100))
+except:
+    print("Error: unable to start thread")
+
+while True:
+    pass
+```
+
+如果我们要用多线程抓取一个网站时，我们可以使用time.sleep(n)来防止给服务器增加太多负担
+
+
+
+#### 竞争条件与队列
+
+我们虽然可以使用列表进行线程间的通信，但列表不是专门为线程通信而设计的，误用很容易导致程序变慢，甚至在竞争条件中产生错误
+
+下面这行代码实际上需要Python重写整个列表：
+
+```python
+myList.pop(0)
+```
+
+下面这行代码在多线程运行下不能获取列表末尾的元素，甚至可能引发异常：
+
+```python
+myList[len(myList)-1]
+```
+
+
+
+队列是一种类似列表的对象，有先进先出的方法，也有后进后出的方法。队列通过queue.put('My message')从任意县城接收数据，再给调用queue.get()方法的线程发送数据
+
+详细例子可以观察P210
+
+
+
+#### threading模块
+
+_thread模块有许多特性
+
+- enumerate: 获取所有活跃线程的列表，无需手动跟踪
+- activeCount: 可以获得总线程数
+- currentThread: 获取当前线程的名称
+
+例子可以看P212
+
+无论何时，只要不需要共享对象，就不要共享，保存在线程局部内存即可。为了安全地在线程中共享对象，可以使用上一节中的Queue模块
+
+
+
+### 多进程抓取
+
+这一块需要的时候自己看P214
+
+
+
+### 多进程抓取的另一种方法
+
+这一块需要的时候自己看P219
+
+
+
