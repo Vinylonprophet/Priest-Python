@@ -16,3 +16,6 @@ class PropertiesItem(Item):
     spider = Field()
     server = Field()
     date = Field()
+
+class CardItem(Item):
+    keyforge_id = Field()

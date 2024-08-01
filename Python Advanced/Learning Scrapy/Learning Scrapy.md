@@ -528,3 +528,231 @@ LinkExtractor是专门用于**抽取链接**的，默认就是查找a或area的h
 回调函数是包含回调方法名称的字符串（'parse_item'），而不是方法引用
 
 如果你希望他跟踪链接，需要在callback方法中使用return或者yield返回它们，如果将Rule()的follow设置为true，那么spider在处理完 `callback` 方法后，会继续跟踪从该页面中提取的链接，并应用同样的规则
+
+
+
+## 迅速的爬虫技巧
+
+本章我们来熟悉一下Scrapy中两个最重要的类——**Request**和**Response**
+
+
+
+### 需要登陆的爬虫
+
+换而言之就是需要先登录获取**Cookie**
+
+我们先将**start_urls**替换为**start_requests()**方法，因为在本例中我们要从一些更加定制化的请求开始，而不仅仅是几个URL
+
+先看一个获取大麦cookie的例子:
+
+```python
+from scrapy import Request
+from scrapy.spiders import Spider
+
+
+class LoginSpider(Spider):
+    name = "login"
+    allowed_domains = ["search.damai.cn", "log.mmstat.com"]
+
+    def start_requests(self):
+        return [
+            Request(
+                "https://log.mmstat.com/v.gif?logtype=1&title=%E5%A4%A7%E9%BA%A6%E7%BD%91-%E5%85%A8%E7%90%83%E6%BC%94%E5%87%BA%E8%B5%9B%E4%BA%8B%E5%AE%98%E6%96%B9%E8%B4%AD%E7%A5%A8%E5%B9%B3%E5%8F%B0-100%25%E6%AD%A3%E5%93%81%E3%80%81%E5%85%88%E4%BB%98%E5%85%88%E6%8A%A2%E3%80%81%E5%9C%A8%E7%BA%BF%E9%80%89%E5%BA%A7%EF%BC%81&pre=https%3A%2F%2Fwww.damai.cn%2F%3Fspm%3Da2oeg.search_category.top.1.6b4b4d1565tUqm&scr=1440x900&_p_url=https%3A%2F%2Fwww.damai.cn%2F%3Fspm%3Da2oeg.home.top.1.502523e1EaYsFH&cna=GvckH9wM2UkBASYC/trmDpNJ&spm-url=a2oeg.home.top.1.502523e1EaYsFH&spm-pre=a2oeg.search_category.top.1.6b4b4d1565tUqm&spm-cnt=a2oeg.home.0.0.3a7123e1nHu1Vv&uidaplus=&aplus&pu_i=&asid=AQAAAADXyahm+CwTPwAAAADjOCNXibPF8w==&sidx=0&ckx=|&p=1&o=win10&b=chrome127&s=1440x900&w=webkit&ism=pc&cache=f43f64e&lver=8.15.23&jsver=aplus_std&pver=0.7.12&tag=1&stag=-1&lstag=-1&_slog=0"
+            )
+        ]
+
+    def parse(self, response):
+        print(response.headers.getlist("Set-Cookie"))
+```
+
+如果是表单提交登陆的话，可以用**FormRequest()**，参数是**formdata**去做表单提交
+
+```python
+def start_requests(self):
+    return [
+        FormRequest(
+        	"http://web:9312/dynamic/login",
+            formdata={"username": "user", "password": "pass"}
+        )
+    ]
+```
+
+Scrapy为我们透明的处理了Cookie，并且一旦登录成功，会在后续的请求中传输这些Cookie，和浏览器执行方式相同
+
+如果请求一些需要实时的cookie等等，可以使用**from_response()**的方法（详细查看P81）
+
+
+
+### 使用JSON API和AJAX页面的爬虫
+
+Python提供了一个非常好的JSON解析库，是使用JSON.loads(response.body)解析JSON，将其转化为Pyhon原语、列表和字典组成的等效Pyhon对象
+
+来看看作者在这一部分写的实战代码：
+
+```python
+import json
+import scrapy
+from properties.items import CardItem
+
+
+class ApiSpider(scrapy.Spider):
+    name = "api"
+    allowed_domains = ["decksofkeyforge.com"]
+
+    def start_requests(self):
+        url = "https://decksofkeyforge.com/api/decks/filter-count"
+        params = {
+            "houses": [],
+            "excludeHouses": [],
+            "page": 0,
+            "constraints": [],
+            "expansions": [],
+            "pageSize": 20,
+            "title": "",
+            "notes": "",
+            "tags": [],
+            "notTags": [],
+            "notesUser": "",
+            "sort": "SAS_RATING",
+            "titleQl": False,
+            "notForSale": False,
+            "forTrade": False,
+            "withOwners": False,
+            "teamDecks": False,
+            "myFavorites": False,
+            "cards": [],
+            "tokens": [],
+            "sortDirection": "DESC",
+            "owner": "",
+            "owners": [],
+            "tournamentIds": [],
+            "previousOwner": "",
+        }
+        yield scrapy.Request(
+            url=url,
+            method="POST",
+            body=json.dumps(params),
+            headers={"Content-Type": "application/json"},
+            callback=self.parse_total_cards,
+        )
+
+    def parse_total_cards(self, response):
+        data = json.loads(response.body)
+        total_cards = data.get("count", 0)
+        page_size = 900
+        total_pages = total_cards // page_size + (
+            1 if total_cards % page_size > 0 else 0
+        )
+        print("===总页数===", total_pages)
+
+        base_url = "https://decksofkeyforge.com/api/decks/filter"
+        for page in range(total_pages):
+            json_data = {
+                "houses": [],
+                "excludeHouses": [],
+                "page": page,
+                "constraints": [],
+                "expansions": [],
+                "pageSize": page_size,
+                "title": "",
+                "notes": "",
+                "tags": [],
+                "notTags": [],
+                "notesUser": "",
+                "sort": "SAS_RATING",
+                "titleQl": False,
+                "notForSale": False,
+                "forTrade": False,
+                "withOwners": False,
+                "teamDecks": False,
+                "myFavorites": False,
+                "cards": [],
+                "tokens": [],
+                "sortDirection": "DESC",
+                "owner": "",
+                "owners": [],
+                "tournamentIds": [],
+                "previousOwner": "",
+            }
+
+            body = json.dumps(json_data)
+            yield scrapy.Request(
+                url=base_url,
+                method="POST",
+                body=body,
+                headers={
+                    "Accept": "application/json, text/plain, */*",
+                    "Accept-Encoding": "gzip, deflate, br, zstd",
+                    "Accept-Language": "en,zh-CN;q=0.9,zh;q=0.8",
+                    "Cache-Control": "no-cache",
+                    "Content-Type": "application/json",
+                    "Cookie": "_gid=GA1.2.1150512372.1721983105; _gat_gtag_UA_132818841_1=1; _ga_YH39DY77CE=GS1.1.1721983104.1.1.1721986236.0.0.0; _ga=GA1.1.1039020519.1721983105",
+                    "Origin": "https://decksofkeyforge.com",
+                    "Pragma": "no-cache",
+                    "Priority": "u=1, i",
+                    "Referer": "https://decksofkeyforge.com/decks",
+                    "sec-ch-ua": '"Not)A;Brand";v="99", "Google Chrome";v="127", "Chromium";v="127"',
+                    "sec-ch-ua-mobile": "?0",
+                    "sec-ch-ua-platform": '"Windows"',
+                    "Sec-Fetch-Dest": "empty",
+                    "Sec-Fetch-Mode": "cors",
+                    "Sec-Fetch-Site": "same-origin",
+                    "Timezone": "480",
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36",
+                },
+                callback=self.parse_cards,
+                meta={"page": page},
+            )
+
+    def parse_cards(self, response):
+        data = json.loads(response.body)
+        decks = data.get("decks", [])
+        page_num = response.meta["page"]
+
+        if not decks:
+            return
+
+        for card in decks:
+            card_item = CardItem()
+            card_item["keyforge_id"] = card["keyforgeId"]
+            yield card_item
+```
+
+
+
+#### 响应间传参
+
+Request有一个名为**meta**的字典，能直接访问Response
+
+```python
+# Request处
+meta={"page": page},
+
+# Response处
+response.meta["page"]
+```
+
+
+
+### 爬虫的倍速提升
+
+就是如果可以在索引页面获取信息，就没有必要从详情页面获取信息了
+
+
+
+### 基于Excel文件爬取的爬虫
+
+创建一个csv文件
+
+试试下列代码：
+
+```python
+import csv
+
+with open("todo.csv", "rU") as f:
+    reader = csv.DictReader(f)
+    for line in reader:
+        print(line)
+```
+
+那么你可以通过这种方式和**start_requests**结合起来，这里不多作演示，书本P92
