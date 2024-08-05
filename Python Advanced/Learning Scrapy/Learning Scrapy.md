@@ -1092,3 +1092,52 @@ telnet localhost 6025
 
 
 
+#### 性能
+
+**CONCURRENT_REQUESTS:** 用于设置**同时**执行的**最大请求数**
+
+**CONCURRENT_REQUESTS_PER_DOMAIN:** 显示**同时**对**每个域名**发出的请求数
+
+**CONCURRENT_REQUESTS_PER_IP:** 显示**同时**对**每个IP**发出的请求数(CONCURRENT_REQUESTS_PER_IP非零的话，CONCURRENT_REQUESTS_PER_DOMAIN就会被忽略)
+
+**CONCURRENT_ITEMS:** 用于设置**同时**处理的**最大项目数**
+
+**DOWNLOAD_TIMEOUT:** 设置**下载操作的超时时间**（秒）
+
+**DOWNLOAD_DELAY:** 设置**下载延迟时间**（秒）
+
+**RANDOMIZE_DOWNLOAD_DELAY:** 用于启用**随机下载延迟**
+
+**DNSCACHE_ENABLED:** 用于启用或禁用**DNS缓存**
+
+```python
+# settings.py
+DOWNLOAD_DELAY = 3
+RANDOMIZE_DOWNLOAD_DELAY = True  # 启用随机下载延迟
+```
+
+如果 `DOWNLOAD_DELAY` 设置为 3 秒，并且 `RANDOMIZE_DOWNLOAD_DELAY` 启用，实际的下载延迟将会在 1.5 秒到 4.5 秒之间随机变化：
+
+
+
+#### 提前终止爬取
+
+**CLOSESPIDER_TIMEOUT:** 用于设置**爬虫运行时间超过指定秒数**后自动关闭爬虫
+
+**CLOSESPIDER_ITEMCOUNT:** 用于设置**抓取到的项目数达到指定数量**后自动关闭爬虫
+
+**CLOSESPIDER_PAGECOUNT:** 用于设置**处理的页面数达到指定数量**后自动关闭爬虫
+
+**CLOSESPIDER_ERRORCOUNT:** 用于设置**发生错误的次数达到指定数量**后自动关闭爬虫
+
+
+
+#### HTTP缓存和离线运行
+
+Scrapy的`HttpCacheMiddleware`（默认未激活）为HTTP请求和响应提供了一个低级缓存
+
+当启用该组件时，将`HTTPCACHE_POLICY`设置为`scrapy.contrib.httpcache. RFC2616Policy`，为了启用该缓存，还需要将`HTTPCACHE_ENABLED`设置为True，并将`HTTPCACHE_DIR`设置为文件系统中的一个目录
+
+也可以设置存储后端类`HTTPCACHE_STORAGE`为`scrapy. contrib. HTTPCACHE_DBM_MODULE`
+
+启用之后即使无法访问Web服务器，也可以爬取一定量的数据
