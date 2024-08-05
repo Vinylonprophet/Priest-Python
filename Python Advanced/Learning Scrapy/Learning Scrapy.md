@@ -1141,3 +1141,106 @@ Scrapy的`HttpCacheMiddleware`（默认未激活）为HTTP请求和响应提供�
 也可以设置存储后端类`HTTPCACHE_STORAGE`为`scrapy. contrib. HTTPCACHE_DBM_MODULE`
 
 启用之后即使无法访问Web服务器，也可以爬取一定量的数据
+
+
+
+#### 爬取风格
+
+我们可以调整优先爬取页面的方式，可以在**DEPTH_LIMIT**中设定最大深度，该值为**0**时表示**不限制**
+
+**DEPTH_PRIORITY**可以基于请求的**深度**指定优先级，如果设置为正数，执行**广度优先**爬取，任务队列由后进先出转为先进先出
+
+遵循robots.txt文件的设置是**ROBOTSTXT_OBEY*
+
+**CookiesMiddleware**包含了和cookie相关的所有操作，可以选择把**COOKIES_ENABLED**设置为False以禁用
+
+**REFERER_ENABLED**与上面类似
+
+**DEFAULT_REQUEST_HEADERS**是自定义头部
+
+**USER_AGENT**设置user_agent
+
+
+
+#### Feed
+
+**FEED_URI:** 用于设置**导出数据的目标URI**
+
+**FEED_FORMAT:** 用于设置**导出数据的格式**
+
+**FEED_EXPORT_ENCODING:** 用于设置**导出数据的编码**
+
+**FEED_EXPORT_FIELDS:** 用于设置**导出数据的字段顺序**
+
+**FEED_EXPORT_INDENT:** 用于设置**导出数据的缩进级别**
+
+**FEED_STORE_EMPTY:** 用于设置**是否在无数据导出时创建空文件**
+
+**FEED_EXPORTERS:** 用于设置**自定义导出器**
+
+**FEED_EXPORT_BATCH_ITEM_COUNT:** 用于设置**每批导出的项目数**
+
+
+
+#### 媒体下载
+
+可以使用图像管道下载媒体内容（暂时用不上）
+
+
+
+#### Amazon Web
+
+Scrapy对Amazon Web有特殊的支持
+
+
+
+#### 使用代理和爬虫
+
+Scrapy的**HttpProxyMiddleware**组件允许使用代理设置
+
+
+
+### 进阶设置
+
+#### 项目相关设置
+
+可以提升具体用例的生产效率
+
+可以更改邮件相关的设置
+
+可以调整Scrapy项目其他项目集成的方式
+
+允许调整设置模块的名称
+
+
+
+#### Scrapy扩展设置
+
+允许添加一些自定义命令
+
+
+
+#### 下载调优
+
+按需查看
+
+
+
+#### 自动限速扩展设置
+
+按需查看
+
+
+
+#### 内存使用扩展设置
+
+按需查看
+
+
+
+#### 日志和调试
+
+按需查看
+
+
+
